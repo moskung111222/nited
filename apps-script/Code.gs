@@ -227,7 +227,13 @@ function login(data) {
 // ============================================================
 
 function createBooking(data) {
+  const lock = LockService.getScriptLock();
   try {
+    const hasLock = lock.waitLock(10000);
+    if (!hasLock) {
+      return { success: false, message: 'ระบบกำลังประมวลผลคำขอจองอื่นอยู่ กรุณาลองใหม่อีกครั้ง' };
+    }
+
     const sheet = getSheet(SHEETS.BOOKING);
     const id = generateId();
 
@@ -260,6 +266,8 @@ function createBooking(data) {
     };
   } catch (err) {
     return { success: false, message: err.toString() };
+  } finally {
+    lock.releaseLock();
   }
 }
 

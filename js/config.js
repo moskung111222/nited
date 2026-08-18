@@ -15,8 +15,6 @@ const CONFIG = {
 
   // System Info
   SCHOOL_NAME: 'โรงเรียนนราศึกษาธิการ',
-  SYSTEM_NAME: 'ระบบนิเทศภายใน',
-
-  // Admin Password
-  ADMIN_PASSWORD: 'admin123'
+  SYSTEM_NAME: 'ระบบนิเทศภายใน'
 };
+
