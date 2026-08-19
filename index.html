@@ -408,71 +408,85 @@
         '</div></div>';
     }
 
+    function renderDashboard(s) {
+      document.getElementById('statTotalBookings').textContent = s.totalBookings;
+      document.getElementById('statCompleted').textContent = s.completedBookings;
+      document.getElementById('statFiles').textContent = s.totalFiles;
+      document.getElementById('statEvaluations').textContent = s.totalEvaluations;
+      document.getElementById('statPending').textContent = s.pendingBookings + s.pendingFiles;
+
+      var maxB = Math.max(s.pendingBookings, s.confirmedBookings, s.completedBookings, s.rejectedBookings, 1);
+      document.getElementById('bookingStatusChart').innerHTML =
+        makeBar('รอดำเนินการ', s.pendingBookings, maxB, '#f39c12') +
+        makeBar('ยืนยันแล้ว', s.confirmedBookings, maxB, '#3498db') +
+        makeBar('นิเทศแล้ว', s.completedBookings, maxB, '#27ae60') +
+        makeBar('ปฏิเสธ', s.rejectedBookings, maxB, '#e74c3c');
+
+      var maxQ = Math.max(s.excellentCount, s.goodCount, s.fairCount, s.poorCount, 1);
+      document.getElementById('qualityChart').innerHTML =
+        makeBar('ดีมาก', s.excellentCount, maxQ, '#27ae60') +
+        makeBar('ดี', s.goodCount, maxQ, '#3498db') +
+        makeBar('พอใช้', s.fairCount, maxQ, '#f39c12') +
+        makeBar('ปรับปรุง', s.poorCount, maxQ, '#e74c3c');
+
+      var dept = s.departmentStats || {};
+      var deptKeys = Object.keys(dept);
+      var maxD = 1;
+      deptKeys.forEach(function(k) { if (dept[k].total > maxD) maxD = dept[k].total; });
+      if (deptKeys.length > 0) {
+        document.getElementById('deptReportChart').innerHTML = deptKeys.map(function(k) {
+          return makeBar(k, dept[k].total, maxD, '#1a5276');
+        }).join('');
+      } else {
+        document.getElementById('deptReportChart').innerHTML = '<div class="empty-state"><p>ยังไม่มีข้อมูล</p></div>';
+      }
+
+      var bookingsTbody = document.getElementById('recentBookingsTable');
+      if (s.recentBookings && s.recentBookings.length > 0) {
+        bookingsTbody.innerHTML = s.recentBookings.map(function(b) {
+          return '<tr><td>' + formatDate(b.date) + '</td><td>' + escapeHtml(b.teacherName) + '</td><td>' + escapeHtml(b.subjectName) + '</td><td>' + getStatusBadge(b.status) + '</td></tr>';
+        }).join('');
+      } else {
+        bookingsTbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="icon">&#128197;</div><h4>ยังไม่มีการจอง</h4></div></td></tr>';
+      }
+
+      var filesTbody = document.getElementById('recentFilesTable');
+      if (s.recentFiles && s.recentFiles.length > 0) {
+        filesTbody.innerHTML = s.recentFiles.map(function(f) {
+          return '<tr><td>' + escapeHtml(f.teacherName) + '</td><td>' + escapeHtml(f.fileType) + '</td><td>' + getStatusBadge(f.status) + '</td></tr>';
+        }).join('');
+      } else {
+        filesTbody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><div class="icon">&#128194;</div><h4>ยังไม่มีไฟล์งาน</h4></div></td></tr>';
+      }
+
+      var teacherKeys = Object.keys(s.teacherStats || {});
+      var tbody = document.getElementById('teacherStatsTable');
+      if (teacherKeys.length > 0) {
+        tbody.innerHTML = teacherKeys.map(function(t) {
+          var ts = s.teacherStats[t];
+          return '<tr><td>' + escapeHtml(t) + '</td><td>' + ts.total + '</td><td>' + ts.completed + '</td><td>' + ts.files + '</td></tr>';
+        }).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>ยังไม่มีข้อมูล</p></div></td></tr>';
+      }
+    }
+
     function loadDashboard() {
+      // 1. โหลดข้อมูลจาก Cache ก่อนเพื่อความรวดเร็ว
+      var cachedStats = localStorage.getItem('nited_dashboard_stats');
+      if (cachedStats) {
+        try {
+          var s = JSON.parse(cachedStats);
+          renderDashboard(s);
+        } catch(e) {}
+      }
+
+      // 2. ดึงข้อมูลล่าสุดจาก API แบบ Background
       apiPost('getDashboardStats', {})
         .then(function(result) {
           if (!result.success) return;
-          var s = result.stats;
-          document.getElementById('statTotalBookings').textContent = s.totalBookings;
-          document.getElementById('statCompleted').textContent = s.completedBookings;
-          document.getElementById('statFiles').textContent = s.totalFiles;
-          document.getElementById('statEvaluations').textContent = s.totalEvaluations;
-          document.getElementById('statPending').textContent = s.pendingBookings + s.pendingFiles;
-
-          var maxB = Math.max(s.pendingBookings, s.confirmedBookings, s.completedBookings, s.rejectedBookings, 1);
-          document.getElementById('bookingStatusChart').innerHTML =
-            makeBar('รอดำเนินการ', s.pendingBookings, maxB, '#f39c12') +
-            makeBar('ยืนยันแล้ว', s.confirmedBookings, maxB, '#3498db') +
-            makeBar('นิเทศแล้ว', s.completedBookings, maxB, '#27ae60') +
-            makeBar('ปฏิเสธ', s.rejectedBookings, maxB, '#e74c3c');
-
-          var maxQ = Math.max(s.excellentCount, s.goodCount, s.fairCount, s.poorCount, 1);
-          document.getElementById('qualityChart').innerHTML =
-            makeBar('ดีมาก', s.excellentCount, maxQ, '#27ae60') +
-            makeBar('ดี', s.goodCount, maxQ, '#3498db') +
-            makeBar('พอใช้', s.fairCount, maxQ, '#f39c12') +
-            makeBar('ปรับปรุง', s.poorCount, maxQ, '#e74c3c');
-
-          var dept = s.departmentStats || {};
-          var deptKeys = Object.keys(dept);
-          var maxD = 1;
-          deptKeys.forEach(function(k) { if (dept[k].total > maxD) maxD = dept[k].total; });
-          if (deptKeys.length > 0) {
-            document.getElementById('deptReportChart').innerHTML = deptKeys.map(function(k) {
-              return makeBar(k, dept[k].total, maxD, '#1a5276');
-            }).join('');
-          } else {
-            document.getElementById('deptReportChart').innerHTML = '<div class="empty-state"><p>ยังไม่มีข้อมูล</p></div>';
-          }
-
-          var bookingsTbody = document.getElementById('recentBookingsTable');
-          if (s.recentBookings && s.recentBookings.length > 0) {
-            bookingsTbody.innerHTML = s.recentBookings.map(function(b) {
-              return '<tr><td>' + formatDate(b.date) + '</td><td>' + escapeHtml(b.teacherName) + '</td><td>' + escapeHtml(b.subjectName) + '</td><td>' + getStatusBadge(b.status) + '</td></tr>';
-            }).join('');
-          } else {
-            bookingsTbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="icon">&#128197;</div><h4>ยังไม่มีการจอง</h4></div></td></tr>';
-          }
-
-          var filesTbody = document.getElementById('recentFilesTable');
-          if (s.recentFiles && s.recentFiles.length > 0) {
-            filesTbody.innerHTML = s.recentFiles.map(function(f) {
-              return '<tr><td>' + escapeHtml(f.teacherName) + '</td><td>' + escapeHtml(f.fileType) + '</td><td>' + getStatusBadge(f.status) + '</td></tr>';
-            }).join('');
-          } else {
-            filesTbody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><div class="icon">&#128194;</div><h4>ยังไม่มีไฟล์งาน</h4></div></td></tr>';
-          }
-
-          var teacherKeys = Object.keys(s.teacherStats || {});
-          var tbody = document.getElementById('teacherStatsTable');
-          if (teacherKeys.length > 0) {
-            tbody.innerHTML = teacherKeys.map(function(t) {
-              var ts = s.teacherStats[t];
-              return '<tr><td>' + escapeHtml(t) + '</td><td>' + ts.total + '</td><td>' + ts.completed + '</td><td>' + ts.files + '</td></tr>';
-            }).join('');
-          } else {
-            tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>ยังไม่มีข้อมูล</p></div></td></tr>';
-          }
+          localStorage.setItem('nited_dashboard_stats', JSON.stringify(result.stats));
+          renderDashboard(result.stats);
         })
         .catch(function(err) { console.error(err); });
     }

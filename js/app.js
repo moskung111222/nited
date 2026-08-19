@@ -235,8 +235,26 @@ function prevMonth(id) { calendarDate.setMonth(calendarDate.getMonth() - 1); loa
 function nextMonth(id) { calendarDate.setMonth(calendarDate.getMonth() + 1); loadCalendarEvents(id); }
 
 function loadCalendarEvents(containerId) {
+  const cacheKey = `nited_calendar_${calendarDate.getMonth()}_${calendarDate.getFullYear()}`;
+  
+  // 1. ลองโหลดจาก Cache ก่อน
+  const cachedEvents = localStorage.getItem(cacheKey);
+  if (cachedEvents) {
+    try {
+      calendarEvents = JSON.parse(cachedEvents);
+      renderCalendar(containerId);
+    } catch(e) {}
+  }
+
+  // 2. ดึงจาก API เบื้องหลัง
   apiPost('getCalendarData', { month: calendarDate.getMonth(), year: calendarDate.getFullYear() })
-    .then(result => { if (result.success) { calendarEvents = result.events; renderCalendar(containerId); } })
+    .then(result => { 
+      if (result.success) { 
+        calendarEvents = result.events; 
+        localStorage.setItem(cacheKey, JSON.stringify(result.events));
+        renderCalendar(containerId); 
+      } 
+    })
     .catch(err => console.error('Calendar error:', err));
 }
 
