@@ -1302,7 +1302,7 @@ function setupSheets() {
 // ============================================================
 
 function setupSampleData() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const ss = SpreadsheetApp.openById(getSpreadsheetId());
   const now = new Date();
   const results = [];
 
