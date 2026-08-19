@@ -1,0 +1,11 @@
+"Username","Password","Full Name","Role","Department","Active"
+"admin","admin123","ผู้ดูแลระบบ","admin","ทั้งหมด",TRUE
+"teacher01","1234","สมชาย ใจดี","teacher","คณิตศาสตร์",TRUE
+"teacher02","1234","สมหญิง รักสอน","teacher","วิทยาศาสตร์",TRUE
+"teacher03","1234","วิชัย เก่งมาก","teacher","ภาษาไทย",TRUE
+"teacher04","1234","พิมพ์ใจ สดใส","teacher","ภาษาอังกฤษ",TRUE
+"teacher05","1234","นิพนธ์ มั่นคง","teacher","สังคมศึกษา",TRUE
+"teacher06","1234","อารี สว่างจิต","teacher","ศิลปะ",TRUE
+"teacher07","1234","ประเสริฐ ชาญชัย","teacher","พลศึกษา",TRUE
+"teacher08","1234","จินดา บุญมี","teacher","เทคโนโลยี",TRUE
+"supervisor01","1234","ดร.วิชาการ นิเทศดี","supervisor","วิชาการ",TRUE
