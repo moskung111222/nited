@@ -1,7 +1,28 @@
 // ============================================================
-// ระบบนิเทศภายในโรงเรียนนราศึกษาธิการ
-// Google Apps Script Backend
+// การตั้งค่าระบบ (Config & Properties)
 // ============================================================
+
+function getSpreadsheetId() {
+  const propId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (propId) return propId;
+  if (typeof SPREADSHEET_ID !== 'undefined' && SPREADSHEET_ID && SPREADSHEET_ID !== 'YOUR_SPREADSHEET_ID') {
+    return SPREADSHEET_ID;
+  }
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active.getId();
+  } catch (e) {}
+  return '';
+}
+
+function getDriveFolderId() {
+  const propId = PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID');
+  if (propId) return propId;
+  if (typeof DRIVE_FOLDER_ID !== 'undefined' && DRIVE_FOLDER_ID && DRIVE_FOLDER_ID !== 'YOUR_DRIVE_FOLDER_ID') {
+    return DRIVE_FOLDER_ID;
+  }
+  return '';
+}
 
 const SPREADSHEET_ID = '1KHJVpe1w4gRPAckL_gbs0WrGEjnDJylwny0od7jvkQM';
 const DRIVE_FOLDER_ID = '1FDj-gDOWuvq8A_kugvPrBhPZ8X4pHVUo';
@@ -1392,4 +1413,86 @@ function setupSampleData() {
   }
 
   return results.join('\n');
+}
+
+// ============================================================
+// 🌟 Auto Setup All: สร้าง Google Sheet + Google Drive + ข้อมูลจำลอง อัตโนมัติใน 1 คลิก
+// ============================================================
+
+function autoSetupAll() {
+  Logger.log('🚀 เริ่มต้นกระบวนการตั้งค่าระบบอัตโนมัติ (Auto-Setup)...');
+  
+  // 1. สร้างหรือค้นหา Google Drive Folder สำหรับเก็บไฟล์
+  let driveFolder;
+  let folderId = getDriveFolderId();
+  if (folderId) {
+    try {
+      driveFolder = DriveApp.getFolderById(folderId);
+      Logger.log('📁 ใช้โฟลเดอร์ Google Drive เดิม: ' + driveFolder.getName());
+    } catch(e) {}
+  }
+  if (!driveFolder) {
+    const folders = DriveApp.getFoldersByName('e-Supervisor_Uploads');
+    if (folders.hasNext()) {
+      driveFolder = folders.next();
+      Logger.log('📁 พบโฟลเดอร์ Google Drive เดิมในระบบ: ' + driveFolder.getName());
+    } else {
+      driveFolder = DriveApp.createFolder('e-Supervisor_Uploads');
+      Logger.log('✨ สร้างโฟลเดอร์ Google Drive ใหม่: ' + driveFolder.getName());
+    }
+  }
+  // ตั้งค่าสิทธิ์โฟลเดอร์ให้ทุกคนที่มีลิงก์เข้าถึงได้ (สำหรับดูรูป/เอกสาร)
+  try {
+    driveFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch(e) {}
+  
+  folderId = driveFolder.getId();
+  PropertiesService.getScriptProperties().setProperty('DRIVE_FOLDER_ID', folderId);
+
+  // 2. สร้างหรือค้นหา Google Sheet
+  let ss;
+  let sheetId = getSpreadsheetId();
+  if (sheetId) {
+    try {
+      ss = SpreadsheetApp.openById(sheetId);
+      Logger.log('📊 ใช้ Google Sheet เดิม: ' + ss.getName());
+    } catch(e) {}
+  }
+  if (!ss) {
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (ss) Logger.log('📊 เชื่อมต่อกับ Active Spreadsheet: ' + ss.getName());
+    } catch(e) {}
+  }
+  if (!ss) {
+    ss = SpreadsheetApp.create('ระบบนิเทศภายใน_e-Supervisor_DB');
+    Logger.log('✨ สร้าง Google Sheet ใหม่: ' + ss.getName());
+  }
+  
+  sheetId = ss.getId();
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', sheetId);
+
+  // 3. สร้าง Sheets และใส่ข้อมูลจำลอง
+  setupSampleData();
+
+  // 4. แสดงผลลัพธ์พร้อมลิงก์
+  const sheetUrl = ss.getUrl();
+  const folderUrl = driveFolder.getUrl();
+  
+  Logger.log('========================================================');
+  Logger.log('🎉 ตั้งค่าระบบสำเร็จเรียบร้อยแล้วทุกอย่าง!');
+  Logger.log('📊 ลิงก์ Google Sheet: ' + sheetUrl);
+  Logger.log('📁 ลิงก์ Google Drive Folder: ' + folderUrl);
+  Logger.log('🔑 SPREADSHEET_ID: ' + sheetId);
+  Logger.log('🔑 DRIVE_FOLDER_ID: ' + folderId);
+  Logger.log('========================================================');
+  Logger.log('👉 ขั้นตอนต่อไป: กด Deploy > New Deployment > Web App (Who has access: Anyone) แล้วนำ Web App URL ไปใส่ใน js/config.js');
+  
+  return {
+    success: true,
+    spreadsheetUrl: sheetUrl,
+    driveFolderUrl: folderUrl,
+    spreadsheetId: sheetId,
+    driveFolderId: folderId
+  };
 }
